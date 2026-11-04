@@ -215,12 +215,16 @@ public static class GeneradorDatos
             "La computadora funciona lentamente."
         };
 
+        Solicitud[] solicitudes = new Solicitud[equipos.Length];
+
         for (int i = 0; i < equipos.Length; i++)
         {
             Prioridad prioridad =
-                i < 3 ? Prioridad.Urgente : Prioridad.Normal;
+                i == 5 || i == 6
+                    ? Prioridad.Urgente
+                    : Prioridad.Normal;
 
-            Solicitud solicitud = new Solicitud(
+            solicitudes[i] = new Solicitud(
                 "SOL" + (i + 1).ToString("000"),
                 clientes[i],
                 equipos[i],
@@ -228,89 +232,69 @@ public static class GeneradorDatos
                 prioridad
             );
 
-            solicitud.SetTiempoEstimado(
+            solicitudes[i].SetTiempoEstimado(
                 aleatorio.Next(2, 9)
             );
-
-            gestor.RegistrarSolicitud(solicitud);
         }
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 5; i++)
         {
-            Solicitud solicitud = gestor.AtenderSiguiente(i);
-
-            gestor.IniciarDiagnostico(
-                solicitud.GetCodigo()
-            );
-
-            gestor.RegistrarDiagnostico(
-                solicitud.GetCodigo(),
-                "Falla detectada durante la revisión técnica.",
-                "Revisión y mantenimiento del equipo.",
-                aleatorio.Next(100, 301)
-            );
-
-            gestor.IniciarReparacion(
-                solicitud.GetCodigo()
-            );
-
-            if (i == 0)
-            {
-                gestor.AgregarRepuestoSolicitud(
-                    solicitud.GetCodigo(),
-                    "REP001",
-                    1
-                );
-            }
-            else if (i == 1)
-            {
-                gestor.AgregarRepuestoSolicitud(
-                    solicitud.GetCodigo(),
-                    "REP002",
-                    1
-                );
-            }
-
-            gestor.MarcarListaParaEntregar(
-                solicitud.GetCodigo()
-            );
-
-            gestor.EntregarSolicitud(
-                solicitud.GetCodigo()
-            );
+            gestor.RegistrarSolicitud(solicitudes[i]);
         }
 
-        Solicitud solicitudNormal =
-            gestor.AtenderSiguiente(3);
+        Solicitud entregada = gestor.AtenderSiguiente(0);
 
-        gestor.IniciarDiagnostico(
-            solicitudNormal.GetCodigo()
-        );
+        gestor.IniciarDiagnostico(entregada.GetCodigo());
 
         gestor.RegistrarDiagnostico(
-            solicitudNormal.GetCodigo(),
-            "Problema identificado en el equipo.",
-            "Limpieza y ajuste de componentes.",
+            entregada.GetCodigo(),
+            "Falla detectada durante la revisión técnica.",
+            "Revisión y mantenimiento del equipo.",
+            aleatorio.Next(100, 301)
+        );
+
+        gestor.IniciarReparacion(entregada.GetCodigo());
+
+        gestor.AgregarRepuestoSolicitud(
+            entregada.GetCodigo(),
+            "REP001",
+            1
+        );
+
+        gestor.MarcarListaParaEntregar(
+            entregada.GetCodigo()
+        );
+
+        gestor.EntregarSolicitud(entregada.GetCodigo());
+
+        Solicitud reparacion = gestor.AtenderSiguiente(1);
+
+        gestor.IniciarDiagnostico(reparacion.GetCodigo());
+
+        gestor.RegistrarDiagnostico(
+            reparacion.GetCodigo(),
+            "Problema de rendimiento identificado.",
+            "Limpieza y sustitución de componentes.",
             aleatorio.Next(80, 201)
         );
 
-        gestor.IniciarReparacion(
-            solicitudNormal.GetCodigo()
-        );
+        gestor.IniciarReparacion(reparacion.GetCodigo());
 
-        Solicitud otraSolicitud =
-            gestor.AtenderSiguiente(4);
+        Solicitud diagnostico = gestor.AtenderSiguiente(2);
 
-        gestor.IniciarDiagnostico(
-            otraSolicitud.GetCodigo()
-        );
+        gestor.IniciarDiagnostico(diagnostico.GetCodigo());
 
         gestor.RegistrarDiagnostico(
-            otraSolicitud.GetCodigo(),
+            diagnostico.GetCodigo(),
             "Revisión inicial completada.",
             "Verificación de componentes.",
             aleatorio.Next(80, 201)
         );
+
+        for (int i = 5; i < solicitudes.Length; i++)
+        {
+            gestor.RegistrarSolicitud(solicitudes[i]);
+        }
 
         gestor.CancelarSolicitud("SOL009");
 
@@ -320,6 +304,17 @@ public static class GeneradorDatos
         Console.WriteLine("Equipos: " + gestor.GetEquipos().Count);
         Console.WriteLine("Repuestos: " + gestor.GetRepuestos().Count);
         Console.WriteLine("Solicitudes: " + gestor.GetSolicitudes().Count);
+
+        Console.WriteLine();
+        Console.WriteLine("=== ESTADO DE LAS SOLICITUDES ===");
+        Console.WriteLine("Urgentes pendientes: " + gestor.GetCantidadUrgentes());
+        Console.WriteLine("Normales pendientes: " + gestor.GetCantidadNormales());
+        Console.WriteLine("En diagnóstico: 1");
+        Console.WriteLine("En reparación: 1");
+        Console.WriteLine("Entregadas: 1");
+        Console.WriteLine("Canceladas: 1");
+
+        Console.WriteLine();
         Console.WriteLine("Datos generados correctamente.");
     }
 }
