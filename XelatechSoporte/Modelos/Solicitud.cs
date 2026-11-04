@@ -188,6 +188,14 @@ public class Solicitud
             );
         }
 
+        if (estado == EstadoSolicitud.EnEspera ||
+            estado == EstadoSolicitud.Asignada)
+        {
+            throw new InvalidOperationException(
+                "No se puede deshacer desde EnEspera o Asignada para proteger las colas."
+            );
+        }
+
         if (historialDeEstados.Count == 0)
         {
             throw new InvalidOperationException(
@@ -195,19 +203,19 @@ public class Solicitud
             );
         }
 
-        EstadoSolicitud estadoActual = estado;
-        EstadoSolicitud estadoAnterior = historialDeEstados.Pop();
+        EstadoSolicitud estadoAnterior = historialDeEstados.Peek();
 
-        if (estadoActual == EstadoSolicitud.Asignada &&
-            estadoAnterior == EstadoSolicitud.EnEspera &&
-            tecnicoAsignado != null)
+        if (estadoAnterior == EstadoSolicitud.Asignada ||
+            estadoAnterior == EstadoSolicitud.EnEspera)
         {
-            tecnicoAsignado.LiberarTrabajo();
-            tecnicoAsignado = null;
+            throw new InvalidOperationException(
+                "No se puede deshacer una asignación desde esta operación."
+            );
         }
 
-        estado = estadoAnterior;
+        estado = historialDeEstados.Pop();
     }
+
 
     public void AsignarTecnico(Tecnico tecnico)
     {
