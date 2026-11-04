@@ -123,38 +123,7 @@ public class Solicitud
         return estado != EstadoSolicitud.Entregada && estado != EstadoSolicitud.Cancelada;
     }
 
-    public void CambiarEstado(EstadoSolicitud nuevoEstado)
-    {
-        if (!EstaActiva())
-        {
-            throw new InvalidOperationException("La solicitud ya fue entregada o cancelada y no se puede modificar.");
-        }
-        if (nuevoEstado != EstadoSolicitud.Cancelada && (int)nuevoEstado != (int)estado + 1)
-        {
-            throw new InvalidOperationException("No se puede pasar de " + estado + " a " + nuevoEstado + ".");
-        }
-        if (nuevoEstado == EstadoSolicitud.Asignada && tecnicoAsignado == null)
-        {
-            throw new InvalidOperationException("Primero se debe asignar un técnico.");
-        }
-        if (nuevoEstado == EstadoSolicitud.ListaParaEntregar && diagnostico == "")
-        {
-            throw new InvalidOperationException("Primero se debe registrar el diagnóstico.");
-        }
-        if (estado == EstadoSolicitud.Entregada && tecnicoAsignado != null)
-            tecnicoAsignado.FinalizarTrabajo();  
-        else if (estado == EstadoSolicitud.Cancelada && tecnicoAsignado != null)
-            tecnicoAsignado.LiberarTrabajo();    
-
-        historialDeEstados.Push(estado);
-        estado = nuevoEstado;
-
-        if (estado == EstadoSolicitud.Entregada)
-        {
-            CalcularTotal();
-        }
-    }
-
+  
     public void DeshacerUltimoCambio()
     {
         if (!EstaActiva())

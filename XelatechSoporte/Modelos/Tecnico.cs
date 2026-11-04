@@ -67,6 +67,17 @@ public class Tecnico : Persona
         trabajosActivos--;
         serviciosFinalizados++;
     }
+    public void LiberarTrabajo()
+    {
+        if (trabajosActivos == 0)
+        {
+            throw new InvalidOperationException(
+                "El técnico no tiene trabajos activos para liberar."
+            );
+        }
+
+        trabajosActivos--;
+    }
 
     public void RegistrarCalificacion(int nota)
     {
