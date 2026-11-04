@@ -161,4 +161,107 @@ public class GestorXelaTech
     {
         return (int[,])cargaSemanal.Clone();
     }
+
+    public void RegistrarSolicitud(Solicitud solicitud)
+    {
+        if (solicitud == null)
+        {
+            throw new ArgumentException("La solicitud no existe.");
+        }
+
+        if (!clientes.Contains(solicitud.GetCliente()))
+        {
+            throw new InvalidOperationException(
+                "El cliente de la solicitud no está registrado."
+            );
+        }
+
+        if (!equipos.Contains(solicitud.GetEquipo()))
+        {
+            throw new InvalidOperationException(
+                "El equipo de la solicitud no está registrado."
+            );
+        }
+
+        foreach (Solicitud actual in solicitudes)
+        {
+            if (actual.GetCodigo().Equals(solicitud.GetCodigo(),
+                StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Ya existe una solicitud con ese código."
+                );
+            }
+
+            if (actual.GetEquipo() == solicitud.GetEquipo() &&
+                actual.EstaActiva())
+            {
+                throw new InvalidOperationException(
+                    "El equipo ya tiene una solicitud activa."
+                );
+            }
+        }
+
+        if (solicitud.GetEstado() != EstadoSolicitud.Recibida)
+        {
+            throw new InvalidOperationException(
+                "La solicitud debe estar en estado Recibida para registrarse."
+            );
+        }
+
+        solicitudes.Add(solicitud);
+        solicitud.GetCliente().IncrementarSolicitudes();
+        solicitud.CambiarEstado(EstadoSolicitud.EnEspera);
+
+        if (solicitud.GetPrioridad() == Prioridad.Urgente)
+        {
+            colaUrgentes.Enqueue(solicitud);
+        }
+        else
+        {
+            colaNormales.Enqueue(solicitud);
+        }
+    }
+
+    public void MostrarColas()
+    {
+        Console.WriteLine("=== SOLICITUDES URGENTES ===");
+
+        if (colaUrgentes.Count == 0)
+        {
+            Console.WriteLine("No hay solicitudes urgentes en espera.");
+        }
+        else
+        {
+            foreach (Solicitud solicitud in colaUrgentes)
+            {
+                Console.WriteLine(
+                    solicitud.GetCodigo() + " - " +
+                    solicitud.GetEquipo().ObtenerTipo() + " - " +
+                    solicitud.GetEstado()
+                );
+            }
+        }
+
+        Console.WriteLine();
+
+        Console.WriteLine("=== SOLICITUDES NORMALES ===");
+
+        if (colaNormales.Count == 0)
+        {
+            Console.WriteLine("No hay solicitudes normales en espera.");
+        }
+        else
+        {
+            foreach (Solicitud solicitud in colaNormales)
+            {
+                Console.WriteLine(
+                    solicitud.GetCodigo() + " - " +
+                    solicitud.GetEquipo().ObtenerTipo() + " - " +
+                    solicitud.GetEstado()
+                );
+            }
+        }
+    }
+
 }
