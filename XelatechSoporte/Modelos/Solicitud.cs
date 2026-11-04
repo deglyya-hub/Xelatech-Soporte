@@ -1,5 +1,7 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
+
 public class Solicitud
 {
     private string codigo = "";
@@ -10,7 +12,7 @@ public class Solicitud
     private DateTime horaRecepcion;
     private Prioridad prioridad;
     private EstadoSolicitud estado;
-    private Tecnico? tecnicoAsignado; 
+    private Tecnico? tecnicoAsignado;
     private string diagnostico = "";
     private string accionesRealizadas = "";
     private List<RepuestoUtilizado> listaRepuestosUtilizados = new List<RepuestoUtilizado>();
@@ -102,6 +104,7 @@ public class Solicitud
         {
             throw new ArgumentException("El tiempo estimado no puede ser negativo.");
         }
+
         tiempoEstimado = horas;
     }
 
@@ -111,39 +114,99 @@ public class Solicitud
         {
             return Especialidad.Laptop;
         }
+
         if (equipo is CompuEscritorio)
         {
             return Especialidad.Escritorio;
         }
+
         return Especialidad.Impresora;
     }
 
     public bool EstaActiva()
     {
-        return estado != EstadoSolicitud.Entregada && estado != EstadoSolicitud.Cancelada;
+        return estado != EstadoSolicitud.Entregada &&
+               estado != EstadoSolicitud.Cancelada;
     }
 
-  
+    public void CambiarEstado(EstadoSolicitud nuevoEstado)
+    {
+        if (!EstaActiva())
+        {
+            throw new InvalidOperationException(
+                "La solicitud ya fue entregada o cancelada y no se puede modificar."
+            );
+        }
+
+        if (nuevoEstado != EstadoSolicitud.Cancelada &&
+            (int)nuevoEstado != (int)estado + 1)
+        {
+            throw new InvalidOperationException(
+                "No se puede pasar de " + estado + " a " + nuevoEstado + "."
+            );
+        }
+
+        if (nuevoEstado == EstadoSolicitud.Asignada && tecnicoAsignado == null)
+        {
+            throw new InvalidOperationException(
+                "Primero se debe asignar un técnico."
+            );
+        }
+
+        if (nuevoEstado == EstadoSolicitud.ListaParaEntregar &&
+            string.IsNullOrWhiteSpace(diagnostico))
+        {
+            throw new InvalidOperationException(
+                "Primero se debe registrar el diagnóstico."
+            );
+        }
+
+        if (nuevoEstado == EstadoSolicitud.Entregada && tecnicoAsignado != null)
+        {
+            tecnicoAsignado.FinalizarTrabajo();
+        }
+        else if (nuevoEstado == EstadoSolicitud.Cancelada && tecnicoAsignado != null)
+        {
+            tecnicoAsignado.LiberarTrabajo();
+        }
+
+        historialDeEstados.Push(estado);
+        estado = nuevoEstado;
+
+        if (estado == EstadoSolicitud.Entregada)
+        {
+            CalcularTotal();
+        }
+    }
+
     public void DeshacerUltimoCambio()
     {
         if (!EstaActiva())
         {
-            throw new InvalidOperationException("La solicitud ya fue entregada o cancelada y no se puede modificar.");
+            throw new InvalidOperationException(
+                "La solicitud ya fue entregada o cancelada y no se puede modificar."
+            );
         }
+
         if (historialDeEstados.Count == 0)
         {
-            throw new InvalidOperationException("El historial de estados está vacío.");
+            throw new InvalidOperationException(
+                "El historial de estados está vacío."
+            );
         }
-        estado = historialDeEstados.Pop();
 
-        EstadoSolicitud anterior = historialDeEstados.Pop();
-        if (estado == EstadoSolicitud.Asignada && anterior == EstadoSolicitud.EnEspera
-            && tecnicoAsignado != null)
+        EstadoSolicitud estadoActual = estado;
+        EstadoSolicitud estadoAnterior = historialDeEstados.Pop();
+
+        if (estadoActual == EstadoSolicitud.Asignada &&
+            estadoAnterior == EstadoSolicitud.EnEspera &&
+            tecnicoAsignado != null)
         {
             tecnicoAsignado.LiberarTrabajo();
             tecnicoAsignado = null;
         }
-        estado = anterior;
+
+        estado = estadoAnterior;
     }
 
     public void AsignarTecnico(Tecnico tecnico)
@@ -152,13 +215,19 @@ public class Solicitud
         {
             throw new ArgumentException("El técnico no existe.");
         }
+
         if (estado != EstadoSolicitud.EnEspera)
         {
-            throw new InvalidOperationException("La solicitud debe estar en espera para asignar un técnico.");
+            throw new InvalidOperationException(
+                "La solicitud debe estar en espera para asignar un técnico."
+            );
         }
+
         if (!tecnico.PuedeRecibir(GetEspecialidadRequerida()))
         {
-            throw new InvalidOperationException("El técnico no tiene la especialidad requerida o tiene la carga completa.");
+            throw new InvalidOperationException(
+                "El técnico no tiene la especialidad requerida o tiene la carga completa."
+            );
         }
 
         tecnico.AsignarTrabajo();
@@ -170,15 +239,24 @@ public class Solicitud
     {
         if (estado != EstadoSolicitud.EnDiagnostico)
         {
-            throw new InvalidOperationException("La solicitud debe estar en diagnóstico.");
+            throw new InvalidOperationException(
+                "La solicitud debe estar en diagnóstico."
+            );
         }
-        if (string.IsNullOrWhiteSpace(diagnostico) || string.IsNullOrWhiteSpace(acciones))
+
+        if (string.IsNullOrWhiteSpace(diagnostico) ||
+            string.IsNullOrWhiteSpace(acciones))
         {
-            throw new ArgumentException("El diagnóstico y las acciones no pueden estar vacíos.");
+            throw new ArgumentException(
+                "El diagnóstico y las acciones no pueden estar vacíos."
+            );
         }
+
         if (costoManoObra < 0)
         {
-            throw new ArgumentException("El costo de mano de obra no puede ser negativo.");
+            throw new ArgumentException(
+                "El costo de mano de obra no puede ser negativo."
+            );
         }
 
         this.diagnostico = diagnostico;
@@ -188,9 +266,12 @@ public class Solicitud
 
     public void AgregarRepuesto(Repuesto repuesto, int cantidad)
     {
-        if (estado != EstadoSolicitud.EnDiagnostico && estado != EstadoSolicitud.EnReparacion)
+        if (estado != EstadoSolicitud.EnDiagnostico &&
+            estado != EstadoSolicitud.EnReparacion)
         {
-            throw new InvalidOperationException("Solo se pueden agregar repuestos en diagnóstico o reparación.");
+            throw new InvalidOperationException(
+                "Solo se pueden agregar repuestos en diagnóstico o reparación."
+            );
         }
 
         RepuestoUtilizado usado = new RepuestoUtilizado(repuesto, cantidad);
@@ -202,10 +283,12 @@ public class Solicitud
     public double CalcularCostoRepuestos()
     {
         double suma = 0;
+
         foreach (RepuestoUtilizado usado in listaRepuestosUtilizados)
         {
             suma = suma + usado.CalcularSubtotal();
         }
+
         costoRepuestos = suma;
         return costoRepuestos;
     }
@@ -219,12 +302,15 @@ public class Solicitud
 
     public void MostrarHistorial()
     {
+        Console.WriteLine("Historial de estados (del más reciente al más antiguo):");
+        Console.WriteLine("- Estado actual: " + estado);
+
         if (historialDeEstados.Count == 0)
         {
-            Console.WriteLine("La solicitud no tiene historial de estados.");
+            Console.WriteLine("No hay estados anteriores.");
             return;
         }
-        Console.WriteLine("Historial de estados (del más reciente al más antiguo):");
+
         foreach (EstadoSolicitud anterior in historialDeEstados)
         {
             Console.WriteLine("- " + anterior);
@@ -240,15 +326,18 @@ public class Solicitud
         Console.WriteLine("Recibida: " + fechaRecepcion.ToString("dd/MM/yyyy") + " " + horaRecepcion.ToString("HH:mm"));
         Console.WriteLine("Prioridad: " + prioridad);
         Console.WriteLine("Estado: " + estado);
+
         if (tecnicoAsignado != null)
         {
             Console.WriteLine("Técnico: " + tecnicoAsignado.GetNombre());
         }
+
         if (diagnostico != "")
         {
             Console.WriteLine("Diagnóstico: " + diagnostico);
             Console.WriteLine("Acciones: " + accionesRealizadas);
         }
+
         Console.WriteLine("Costo de revisión: Q" + costoRevision.ToString("0.00"));
         Console.WriteLine("Mano de obra: Q" + costoManoObra.ToString("0.00"));
         Console.WriteLine("Repuestos: Q" + costoRepuestos.ToString("0.00"));
